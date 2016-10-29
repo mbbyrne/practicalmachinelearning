@@ -1,0 +1,102 @@
+
+---
+    title: "Practical Machine Learning Course Project - October 2016"
+---
+    
+##Executive Summary
+Prediction of the manner in which an exercise was performed using a training
+data set.
+Six young health participants were asked to perform one set of 10 repetitions 
+of the Unilateral Dumbbell Biceps Curl in five different fashions: 
+exactly according to the specification (Class A) 
+throwing the elbows to the front (Class B)
+lifting the dumbbell only halfway (Class C)
+lowering the dumbbell only halfway (Class D) 
+throwing the hips to the front (Class E)
+
+http://groupware.les.inf.puc-rio.br/har
+
+##Import the data
+```{r}
+
+training<-read.csv("./training.csv",na.strings=c("#DIV/0!","NA"))
+
+testing<-read.csv("./testing.csv",na.strings=c("#DIV/0!","NA"))
+
+str(training)
+```
+
+##Data Cleaning
+Remove columns that have a large number of NAs. Removed ID columns
+
+```{r}
+training_subset<-training[,apply(training, 2, function(x) !any(is.na(x)))]
+training_clean<-training_subset[,-(1:7)]
+
+
+testing_subset<-testing[,apply(testing, 2, function(x) !any(is.na(x)))]
+testing_clean<-testing_subset[,-(1:7)]
+```
+
+##Create partitions for Cross Validation
+Used the functionality in the Caret package to split the training data set into
+a training partition and a test partition to be used for cross validation of 
+the model
+```{r}
+library(caret) #unifying machine learning package
+inTrain  <- createDataPartition(
+    training_clean$classe, 
+    p=0.70, 
+    list=FALSE)
+
+part_train <- training_clean[inTrain, ]
+part_test  <- training_clean[-inTrain, ]
+```
+
+
+##Random Forest Model
+A Random Forest Model was chosen due to its high accuracy.
+Random forests are a way of averaging multiple deep decision trees, trained 
+on different parts of the same training set, with the goal of reducing the 
+variance. They can be difficult to interpret but are often very accurate.
+
+```{r}
+
+modelRF<-train( classe~.,
+    data=part_train, 
+    method="rf",
+    ntree=10)
+
+modelRF
+
+```
+##Cross Validation on part_test
+```{r}
+
+predictRF<-predict(modelRF,newdata=part_test)
+
+```
+##Confusion Matrix
+```{r}
+
+confusion_matrix <- confusionMatrix(predictRF, part_test$classe)
+confusion_matrix
+
+```
+###Out of Sample Error is estimated at: 1.41%
+
+
+##Predictions on Test Data for Quiz
+```{r}
+predictQuiz<-predict(modelRF,newdata=testing_clean)
+
+predictQuiz
+```
+##Conclusion
+
+The model created was accurate enough to predict all of the 20 validation tests
+correctly. Only 10 decision trees were used in this project in order to cut down
+the running time of the analysis but the accuracy could be increased by 
+increasing the number of trees using the ntree parameter.
+
+
